@@ -11,7 +11,7 @@
     "properties": {
         "connectorUiConfig": {
             "id": "ScutumConnector",
-            "title": "Scutum",
+            "title": "Scutum Web Application Firewall",
             "publisher": "Secure Sky Technology",
             "descriptionMarkdown": "The Scutum connector ingests security alert data from Scutum WAF (Web Application Firewall) into Microsoft Sentinel, including alert details such as attack types, source IPs, and request information.\n\nSupports API Key authentication.\n\nFor more information, visit [Scutum API Docs](https://support.scutum.jp/manual/api/api-overview.html).",
             "graphQueriesTableName": "ScutumAlert_CL",
@@ -130,6 +130,9 @@
                                         "columnName": "Management Console ID",
                                         "columnValue": "properties.request.queryParameters.id"
                                     }
+                                ],
+                                "menuItems": [
+                                    "DeleteConnector"
                                 ]
                             }
                         }
