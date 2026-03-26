@@ -1,0 +1,55 @@
+[
+    {
+        "name": "ScutumAlert_CL",
+        "type": "Microsoft.OperationalInsights/workspaces/tables",
+        "apiVersion": "2025-02-01",
+        "location": "{{location}}",
+        "properties": {
+            "schema": {
+                "name": "ScutumAlert_CL",
+                "columns": [
+                    {
+                        "name": "TimeGenerated",
+                        "type": "datetime",
+                        "description": "Event timestamp, mapped from the ts field indicating when Scutum detected or blocked the communication."
+                    },
+                    {
+                        "name": "LogId",
+                        "type": "string",
+                        "description": "Defense log ID."
+                    },
+                    {
+                        "name": "IpAddress",
+                        "type": "string",
+                        "description": "Source IP address of the request."
+                    },
+                    {
+                        "name": "Block",
+                        "type": "boolean",
+                        "description": "Whether the communication was blocked. False when WAF defense is OFF or for false positive traffic."
+                    },
+                    {
+                        "name": "Category",
+                        "type": "dynamic",
+                        "description": "Array of detected attack categories. A single request may trigger multiple attack classifications."
+                    },
+                    {
+                        "name": "Uri",
+                        "type": "string",
+                        "description": "Target URI of the request."
+                    },
+                    {
+                        "name": "Request",
+                        "type": "string",
+                        "description": "Base64-encoded HTTP request data from the defense log. May not be present if no record exists."
+                    },
+                    {
+                        "name": "Response",
+                        "type": "string",
+                        "description": "Base64-encoded HTTP response data from the defense log. May not be present if no record exists."
+                    }
+                ]
+            }
+        }
+    }
+]

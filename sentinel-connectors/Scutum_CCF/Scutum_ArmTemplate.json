@@ -1,0 +1,771 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "minLength": 1,
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Not used, but needed to pass arm-ttk test `Location-Should-Not-Be-Hardcoded`.  We instead use the `workspace-location` which is derived from the LA workspace"
+            }
+        },
+        "workspace-location": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "[concat('Region to deploy solution resources -- separate from location selection',parameters('location'))]"
+            }
+        },
+        "subscription": {
+            "defaultValue": "[last(split(subscription().id, '/'))]",
+            "type": "string",
+            "metadata": {
+                "description": "subscription id where Microsoft Sentinel is setup"
+            }
+        },
+        "resourceGroupName": {
+            "defaultValue": "[resourceGroup().name]",
+            "type": "string",
+            "metadata": {
+                "description": "resource group name where Microsoft Sentinel is setup"
+            }
+        },
+        "workspace": {
+            "defaultValue": "",
+            "type": "string",
+            "metadata": {
+                "description": "Workspace name for Log Analytics where Microsoft Sentinel is setup"
+            }
+        },
+        "apiKey": {
+            "type": "securestring",
+            "defaultValue": "-NA-"
+        },
+        "scutumHost": {
+            "type": "securestring",
+            "defaultValue": "-NA-"
+        },
+        "scutumId": {
+            "type": "securestring",
+            "defaultValue": "-NA-"
+        }
+    },
+    "variables": {
+        "workspaceResourceId": "[resourceId('microsoft.OperationalInsights/Workspaces', parameters('workspace'))]",
+        "_solutionName": "Scutum_CCF-Development Connector",
+        "_solutionVersion": "1.0.5",
+        "_solutionAuthor": "admin@azurecsa.net",
+        "_packageIcon": "icon",
+        "_solutionId": "azuresentinel.azure-sentinel-solution-azuresentinel.azure-sentinel-Scutum_CCF-dev-preview",
+        "dataConnectorVersionConnectorDefinition": "1.0.5",
+        "dataConnectorVersionConnections": "1.0.5",
+        "_solutionTier": "Community",
+        "_dataConnectorContentIdConnections": "Scutum_CCFTemplateConnections",
+        "dataConnectorTemplateNameConnections": "[concat(parameters('workspace'),'-dc-',uniquestring(variables('_dataConnectorContentIdConnections')))]",
+        "_dataConnectorContentIdConnectorDefinition": "Scutum_CCFTemplateConnectorDefinition",
+        "dataConnectorTemplateNameConnectorDefinition": "[concat(parameters('workspace'),'-dc-',uniquestring(variables('_dataConnectorContentIdConnectorDefinition')))]",
+        "_logAnalyticsTableId1": "ScutumAlert_CL"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.OperationalInsights/workspaces/providers/contentTemplates",
+            "apiVersion": "2023-04-01-preview",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', variables('dataConnectorTemplateNameConnectorDefinition'), variables('dataConnectorVersionConnectorDefinition'))]",
+            "location": "[parameters('workspace-location')]",
+            "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/contentPackages', variables('_solutionId'))]"
+            ],
+            "properties": {
+                "contentId": "[variables('_dataConnectorContentIdConnectorDefinition')]",
+                "displayName": "[concat(variables('_solutionName'), variables('dataConnectorTemplateNameConnectorDefinition'))]",
+                "contentKind": "DataConnector",
+                "mainTemplate": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "[variables('dataConnectorVersionConnectorDefinition')]",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',concat('DataConnector-', variables('_dataConnectorContentIdConnectorDefinition')))]",
+                            "apiVersion": "2022-01-01-preview",
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/metadata",
+                            "properties": {
+                                "parentId": "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/dataConnectorDefinitions', variables('_dataConnectorContentIdConnectorDefinition'))]",
+                                "contentId": "[variables('_dataConnectorContentIdConnectorDefinition')]",
+                                "kind": "DataConnector",
+                                "version": "[variables('dataConnectorVersionConnectorDefinition')]",
+                                "source": {
+                                    "sourceId": "[variables('_solutionId')]",
+                                    "name": "[variables('_solutionName')]",
+                                    "kind": "Solution"
+                                },
+                                "author": {
+                                    "name": "[variables('_solutionAuthor')]"
+                                },
+                                "support": {
+                                    "name": "[variables('_solutionAuthor')]",
+                                    "tier": "[variables('_solutionTier')]"
+                                },
+                                "dependencies": {
+                                    "criteria": [
+                                        {
+                                            "version": "[variables('dataConnectorVersionConnections')]",
+                                            "contentId": "[variables('_dataConnectorContentIdConnections')]",
+                                            "kind": "ResourcesDataConnector"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',variables('_dataConnectorContentIdConnectorDefinition'))]",
+                            "apiVersion": "2022-09-01-preview",
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectorDefinitions",
+                            "location": "[parameters('workspace-location')]",
+                            "kind": "Customizable",
+                            "properties": {
+                                "connectorUiConfig": {
+                                    "id": "ScutumConnector",
+                                    "title": "Scutum",
+                                    "publisher": "Secure Sky Technology",
+                                    "descriptionMarkdown": "The Scutum connector ingests security alert data from Scutum WAF (Web Application Firewall) into Microsoft Sentinel, including alert details such as attack types, source IPs, and request information.\n\nSupports API Key authentication.\n\nFor more information, visit [Scutum API Docs](https://support.scutum.jp/manual/api/api-overview.html).",
+                                    "graphQueriesTableName": "ScutumAlert_CL",
+                                    "graphQueries": [
+                                        {
+                                            "metricName": "Total events received",
+                                            "legend": "Scutum Alert Events",
+                                            "baseQuery": "ScutumAlert_CL"
+                                        }
+                                    ],
+                                    "sampleQueries": [
+                                        {
+                                            "description": "All Scutum WAF alerts",
+                                            "query": "ScutumAlert_CL\n| sort by TimeGenerated desc\n| take 100"
+                                        },
+                                        {
+                                            "description": "Blocked attacks by category",
+                                            "query": "ScutumAlert_CL\n| where Block == true\n| mv-expand Category\n| summarize Count = count() by tostring(Category)\n| sort by Count desc"
+                                        },
+                                        {
+                                            "description": "Top source IPs",
+                                            "query": "ScutumAlert_CL\n| summarize Count = count() by IpAddress\n| top 10 by Count"
+                                        }
+                                    ],
+                                    "dataTypes": [
+                                        {
+                                            "name": "ScutumAlert_CL",
+                                            "lastDataReceivedQuery": "ScutumAlert_CL\n| summarize Time = max(TimeGenerated)\n| where isnotempty(Time)"
+                                        }
+                                    ],
+                                    "connectivityCriteria": [
+                                        {
+                                            "type": "HasDataConnectors"
+                                        }
+                                    ],
+                                    "availability": {
+                                        "isPreview": true,
+                                        "status": 1
+                                    },
+                                    "permissions": {
+                                        "resourceProvider": [
+                                            {
+                                                "provider": "Microsoft.OperationalInsights/workspaces",
+                                                "permissionsDisplayText": "Read and Write permissions on the Log Analytics workspace are required.",
+                                                "providerDisplayName": "Workspace",
+                                                "scope": "Workspace",
+                                                "requiredPermissions": {
+                                                    "read": true,
+                                                    "write": true,
+                                                    "delete": true,
+                                                    "action": false
+                                                }
+                                            }
+                                        ],
+                                        "customs": [
+                                            {
+                                                "name": "Scutum API Key",
+                                                "description": "A Scutum API Key is required. Refer to the [Scutum API documentation](https://support.scutum.jp/manual/api/api-overview.html) for instructions on how to obtain one."
+                                            }
+                                        ]
+                                    },
+                                    "instructionSteps": [
+                                        {
+                                            "title": "Connect Scutum WAF to Microsoft Sentinel",
+                                            "description": "Enter your Scutum API credentials below to start ingesting WAF alert logs into Microsoft Sentinel. You can add multiple connections for different hosts.",
+                                            "instructions": [
+                                                {
+                                                    "type": "Textbox",
+                                                    "parameters": {
+                                                        "label": "Scutum API Key",
+                                                        "placeholder": "Enter your Scutum API key",
+                                                        "type": "password",
+                                                        "name": "apiKey"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "Textbox",
+                                                    "parameters": {
+                                                        "label": "Host (FQDN)",
+                                                        "placeholder": "e.g. www.example.com",
+                                                        "type": "text",
+                                                        "name": "scutumHost"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "Textbox",
+                                                    "parameters": {
+                                                        "label": "Scutum Management Console ID",
+                                                        "placeholder": "Enter your management console ID",
+                                                        "type": "text",
+                                                        "name": "scutumId"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "ConnectionToggleButton",
+                                                    "parameters": {
+                                                        "connectLabel": "Connect",
+                                                        "name": "connect"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "title": "Active Connections",
+                                            "description": "The table below shows the status of each connected Scutum WAF host.",
+                                            "instructions": [
+                                                {
+                                                    "type": "DataConnectorsGrid",
+                                                    "parameters": {
+                                                        "mapping": [
+                                                            {
+                                                                "columnName": "Host (FQDN)",
+                                                                "columnValue": "properties.request.queryParameters.host"
+                                                            },
+                                                            {
+                                                                "columnName": "Management Console ID",
+                                                                "columnValue": "properties.request.queryParameters.id"
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "[variables('_logAnalyticsTableId1')]",
+                            "apiVersion": "2021-03-01-privatepreview",
+                            "type": "Microsoft.OperationalInsights/workspaces/tables",
+                            "location": "[parameters('workspace-location')]",
+                            "kind": null,
+                            "properties": {
+                                "schema": {
+                                    "name": "[variables('_logAnalyticsTableId1')]",
+                                    "columns": [
+                                        {
+                                            "name": "TimeGenerated",
+                                            "type": "datetime",
+                                            "description": "Event timestamp, mapped from the ts field indicating when Scutum detected or blocked the communication."
+                                        },
+                                        {
+                                            "name": "LogId",
+                                            "type": "string",
+                                            "description": "Defense log ID."
+                                        },
+                                        {
+                                            "name": "IpAddress",
+                                            "type": "string",
+                                            "description": "Source IP address of the request."
+                                        },
+                                        {
+                                            "name": "Block",
+                                            "type": "boolean",
+                                            "description": "Whether the communication was blocked. False when WAF defense is OFF or for false positive traffic."
+                                        },
+                                        {
+                                            "name": "Category",
+                                            "type": "dynamic",
+                                            "description": "Array of detected attack categories. A single request may trigger multiple attack classifications."
+                                        },
+                                        {
+                                            "name": "Uri",
+                                            "type": "string",
+                                            "description": "Target URI of the request."
+                                        },
+                                        {
+                                            "name": "Request",
+                                            "type": "string",
+                                            "description": "Base64-encoded HTTP request data from the defense log. May not be present if no record exists."
+                                        },
+                                        {
+                                            "name": "Response",
+                                            "type": "string",
+                                            "description": "Base64-encoded HTTP response data from the defense log. May not be present if no record exists."
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "ScutumDCR",
+                            "apiVersion": "2021-09-01-preview",
+                            "type": "Microsoft.Insights/dataCollectionRules",
+                            "location": "[parameters('workspace-location')]",
+                            "kind": "Direct",
+                            "properties": {
+                                "streamDeclarations": {
+                                    "Custom-ScutumAlert_CL": {
+                                        "columns": [
+                                            {
+                                                "name": "log_id",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "ip",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "block",
+                                                "type": "boolean"
+                                            },
+                                            {
+                                                "name": "category",
+                                                "type": "dynamic"
+                                            },
+                                            {
+                                                "name": "uri",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "ts",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "request",
+                                                "type": "string"
+                                            },
+                                            {
+                                                "name": "response",
+                                                "type": "string"
+                                            }
+                                        ]
+                                    }
+                                },
+                                "destinations": {
+                                    "logAnalytics": [
+                                        {
+                                            "workspaceResourceId": "[variables('workspaceResourceId')]",
+                                            "name": "clv2ws1"
+                                        }
+                                    ]
+                                },
+                                "dataFlows": [
+                                    {
+                                        "streams": [
+                                            "Custom-ScutumAlert_CL"
+                                        ],
+                                        "destinations": [
+                                            "clv2ws1"
+                                        ],
+                                        "outputStream": "Custom-ScutumAlert_CL",
+                                        "transformKql": "source | extend TimeGenerated = todatetime(ts) | project TimeGenerated, LogId = log_id, IpAddress = ip, Block = block, Category = category, Uri = uri, Request = request, Response = response"
+                                    }
+                                ]
+                            },
+                            "dependsOn": [
+                                "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('workspace'), variables('_logAnalyticsTableId1'))]"
+                            ]
+                        }
+                    ]
+                },
+                "packageKind": "Solution",
+                "packageVersion": "[variables('_solutionVersion')]",
+                "packageName": "[variables('_solutionName')]",
+                "contentProductId": "[concat(substring(variables('_solutionId'), 0, 50),'-','dc','-', uniqueString(concat(variables('_solutionId'),'-','DataConnector','-',variables('_dataConnectorContentIdConnectorDefinition'),'-', variables('dataConnectorVersionConnectorDefinition'))))]",
+                "packageId": "[variables('_solutionId')]",
+                "contentSchemaVersion": "3.0.0",
+                "version": "[variables('_solutionVersion')]"
+            }
+        },
+        {
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',variables('_dataConnectorContentIdConnectorDefinition'))]",
+            "apiVersion": "2022-09-01-preview",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectorDefinitions",
+            "location": "[parameters('workspace-location')]",
+            "kind": "Customizable",
+            "properties": {
+                "connectorUiConfig": {
+                    "id": "ScutumConnector",
+                    "title": "Scutum",
+                    "publisher": "Secure Sky Technology",
+                    "descriptionMarkdown": "The Scutum connector ingests security alert data from Scutum WAF (Web Application Firewall) into Microsoft Sentinel, including alert details such as attack types, source IPs, and request information.\n\nSupports API Key authentication.\n\nFor more information, visit [Scutum API Docs](https://support.scutum.jp/manual/api/api-overview.html).",
+                    "graphQueriesTableName": "ScutumAlert_CL",
+                    "graphQueries": [
+                        {
+                            "metricName": "Total events received",
+                            "legend": "Scutum Alert Events",
+                            "baseQuery": "ScutumAlert_CL"
+                        }
+                    ],
+                    "sampleQueries": [
+                        {
+                            "description": "All Scutum WAF alerts",
+                            "query": "ScutumAlert_CL\n| sort by TimeGenerated desc\n| take 100"
+                        },
+                        {
+                            "description": "Blocked attacks by category",
+                            "query": "ScutumAlert_CL\n| where Block == true\n| mv-expand Category\n| summarize Count = count() by tostring(Category)\n| sort by Count desc"
+                        },
+                        {
+                            "description": "Top source IPs",
+                            "query": "ScutumAlert_CL\n| summarize Count = count() by IpAddress\n| top 10 by Count"
+                        }
+                    ],
+                    "dataTypes": [
+                        {
+                            "name": "ScutumAlert_CL",
+                            "lastDataReceivedQuery": "ScutumAlert_CL\n| summarize Time = max(TimeGenerated)\n| where isnotempty(Time)"
+                        }
+                    ],
+                    "connectivityCriteria": [
+                        {
+                            "type": "HasDataConnectors"
+                        }
+                    ],
+                    "availability": {
+                        "isPreview": true,
+                        "status": 1
+                    },
+                    "permissions": {
+                        "resourceProvider": [
+                            {
+                                "provider": "Microsoft.OperationalInsights/workspaces",
+                                "permissionsDisplayText": "Read and Write permissions on the Log Analytics workspace are required.",
+                                "providerDisplayName": "Workspace",
+                                "scope": "Workspace",
+                                "requiredPermissions": {
+                                    "read": true,
+                                    "write": true,
+                                    "delete": true,
+                                    "action": false
+                                }
+                            }
+                        ],
+                        "customs": [
+                            {
+                                "name": "Scutum API Key",
+                                "description": "A Scutum API Key is required. Refer to the [Scutum API documentation](https://support.scutum.jp/manual/api/api-overview.html) for instructions on how to obtain one."
+                            }
+                        ]
+                    },
+                    "instructionSteps": [
+                        {
+                            "title": "Connect Scutum WAF to Microsoft Sentinel",
+                            "description": "Enter your Scutum API credentials below to start ingesting WAF alert logs into Microsoft Sentinel. You can add multiple connections for different hosts.",
+                            "instructions": [
+                                {
+                                    "type": "Textbox",
+                                    "parameters": {
+                                        "label": "Scutum API Key",
+                                        "placeholder": "Enter your Scutum API key",
+                                        "type": "password",
+                                        "name": "apiKey"
+                                    }
+                                },
+                                {
+                                    "type": "Textbox",
+                                    "parameters": {
+                                        "label": "Host (FQDN)",
+                                        "placeholder": "e.g. www.example.com",
+                                        "type": "text",
+                                        "name": "scutumHost"
+                                    }
+                                },
+                                {
+                                    "type": "Textbox",
+                                    "parameters": {
+                                        "label": "Scutum Management Console ID",
+                                        "placeholder": "Enter your management console ID",
+                                        "type": "text",
+                                        "name": "scutumId"
+                                    }
+                                },
+                                {
+                                    "type": "ConnectionToggleButton",
+                                    "parameters": {
+                                        "connectLabel": "Connect",
+                                        "name": "connect"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Active Connections",
+                            "description": "The table below shows the status of each connected Scutum WAF host.",
+                            "instructions": [
+                                {
+                                    "type": "DataConnectorsGrid",
+                                    "parameters": {
+                                        "mapping": [
+                                            {
+                                                "columnName": "Host (FQDN)",
+                                                "columnValue": "properties.request.queryParameters.host"
+                                            },
+                                            {
+                                                "columnName": "Management Console ID",
+                                                "columnValue": "properties.request.queryParameters.id"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',concat('DataConnector-', variables('_dataConnectorContentIdConnectorDefinition')))]",
+            "apiVersion": "2022-01-01-preview",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/metadata",
+            "properties": {
+                "parentId": "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/dataConnectorDefinitions', variables('_dataConnectorContentIdConnectorDefinition'))]",
+                "contentId": "[variables('_dataConnectorContentIdConnectorDefinition')]",
+                "kind": "DataConnector",
+                "version": "[variables('dataConnectorVersionConnectorDefinition')]",
+                "source": {
+                    "sourceId": "[variables('_solutionId')]",
+                    "name": "[variables('_solutionName')]",
+                    "kind": "Solution"
+                },
+                "author": {
+                    "name": "[variables('_solutionAuthor')]"
+                },
+                "support": {
+                    "name": "[variables('_solutionAuthor')]",
+                    "tier": "[variables('_solutionTier')]"
+                },
+                "dependencies": {
+                    "criteria": [
+                        {
+                            "version": "[variables('dataConnectorVersionConnections')]",
+                            "contentId": "[variables('_dataConnectorContentIdConnections')]",
+                            "kind": "ResourcesDataConnector"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces/providers/contentTemplates",
+            "apiVersion": "2023-04-01-preview",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', variables('dataConnectorTemplateNameConnections'), variables('dataConnectorVersionConnections'))]",
+            "location": "[parameters('workspace-location')]",
+            "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/contentPackages', variables('_solutionId'))]"
+            ],
+            "properties": {
+                "contentId": "[variables('_dataConnectorContentIdConnections')]",
+                "displayName": "[concat(variables('_solutionName'), variables('dataConnectorTemplateNameConnections'))]",
+                "contentKind": "ResourcesDataConnector",
+                "mainTemplate": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "[variables('dataConnectorVersionConnections')]",
+                    "parameters": {
+                        "connectorDefinitionName": {
+                            "defaultValue": "connectorDefinitionName",
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "workspace": {
+                            "defaultValue": "[parameters('workspace')]",
+                            "type": "string"
+                        },
+                        "dcrConfig": {
+                            "defaultValue": {
+                                "dataCollectionEndpoint": "data collection Endpoint",
+                                "dataCollectionRuleImmutableId": "data collection rule immutableId"
+                            },
+                            "type": "object"
+                        },
+                        "apiKey": {
+                            "defaultValue": "apiKey",
+                            "type": "securestring"
+                        },
+                        "scutumHost": {
+                            "defaultValue": "scutumHost",
+                            "type": "string"
+                        },
+                        "scutumId": {
+                            "defaultValue": "scutumId",
+                            "type": "string"
+                        }
+                    },
+                    "variables": {
+                        "_dataConnectorContentIdConnections": "[variables('_dataConnectorContentIdConnections')]"
+                    },
+                    "resources": [
+                        {
+                            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',concat('DataConnector-', variables('_dataConnectorContentIdConnections')))]",
+                            "apiVersion": "2022-01-01-preview",
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/metadata",
+                            "properties": {
+                                "parentId": "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspace')), 'Microsoft.SecurityInsights/dataConnectors', variables('_dataConnectorContentIdConnections'))]",
+                                "contentId": "[variables('_dataConnectorContentIdConnections')]",
+                                "kind": "ResourcesDataConnector",
+                                "version": "[variables('dataConnectorVersionConnections')]",
+                                "source": {
+                                    "sourceId": "[variables('_solutionId')]",
+                                    "name": "[variables('_solutionName')]",
+                                    "kind": "Solution"
+                                },
+                                "author": {
+                                    "name": "[variables('_solutionAuthor')]"
+                                },
+                                "support": {
+                                    "name": "[variables('_solutionAuthor')]",
+                                    "tier": "[variables('_solutionTier')]"
+                                }
+                            }
+                        },
+                        {
+                            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/',variables('_dataConnectorContentIdConnections'),'-dataPoller1')]",
+                            "apiVersion": "2022-12-01-preview",
+                            "type": "Microsoft.OperationalInsights/workspaces/providers/dataConnectors",
+                            "location": "[parameters('workspace-location')]",
+                            "kind": "RestApiPoller",
+                            "properties": {
+                                "connectorDefinitionName": "[[parameters('connectorDefinitionName')]",
+                                "dataType": "ScutumAlert_CL",
+                                "dcrConfig": {
+                                    "streamName": "Custom-ScutumAlert_CL",
+                                    "dataCollectionEndpoint": "[[parameters('dcrConfig').dataCollectionEndpoint]",
+                                    "dataCollectionRuleImmutableId": "[[parameters('dcrConfig').dataCollectionRuleImmutableId]"
+                                },
+                                "auth": {
+                                    "type": "APIKey",
+                                    "ApiKey": "[[parameters('apiKey')]",
+                                    "ApiKeyName": "X-Scutum-API-Key",
+                                    "ApiKeyIdentifier": ""
+                                },
+                                "request": {
+                                    "apiEndpoint": "https://api.scutum.jp/api/v1/alert",
+                                    "httpMethod": "GET",
+                                    "queryTimeFormat": "yyyy-MM-ddTHH:mm:sszzz",
+                                    "rateLimitQPS": 1,
+                                    "queryWindowInMin": 5,
+                                    "retryCount": 3,
+                                    "timeoutInSeconds": 60,
+                                    "StartTimeAttributeName": "from",
+                                    "EndTimeAttributeName": "to",
+                                    "queryParameters": {
+                                        "host": "[[parameters('scutumHost')]",
+                                        "id": "[[parameters('scutumId')]",
+                                        "time_order": "asc"
+                                    }
+                                },
+                                "paging": {
+                                    "pagingType": "NextPageToken",
+                                    "nextPageTokenJsonPath": "$.next_marker",
+                                    "NextPageParaName": "marker",
+                                    "hasNextFlagJsonPath": "$.truncated",
+                                    "pageSize": 1000
+                                },
+                                "response": {
+                                    "eventsJsonPaths": [
+                                        "$.data"
+                                    ],
+                                    "format": "json"
+                                },
+                                "stepInfo": {
+                                    "stepType": "Nested",
+                                    "nextSteps": [
+                                        {
+                                            "stepId": "fetchAlertDetail",
+                                            "stepPlaceholdersParsingKql": "source | extend _LogId = tostring(log_id)"
+                                        }
+                                    ]
+                                },
+                                "stepCollectorConfigs": {
+                                    "fetchAlertDetail": {
+                                        "shouldJoinNestedData": true,
+                                        "request": {
+                                            "apiEndpoint": "https://api.scutum.jp/api/v1/alert_detail",
+                                            "httpMethod": "GET",
+                                            "queryParameters": {
+                                                "host": "[[parameters('scutumHost')]",
+                                                "id": "[[parameters('scutumId')]",
+                                                "log_id": "$_LogId$"
+                                            }
+                                        },
+                                        "response": {
+                                            "eventsJsonPaths": [
+                                                "$"
+                                            ],
+                                            "format": "json"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "packageKind": "Solution",
+                "packageVersion": "[variables('_solutionVersion')]",
+                "packageName": "[variables('_solutionName')]",
+                "contentProductId": "[concat(substring(variables('_solutionId'), 0, 50),'-','rdc','-', uniqueString(concat(variables('_solutionId'),'-','ResourcesDataConnector','-',variables('_dataConnectorContentIdConnections'),'-', variables('dataConnectorVersionConnections'))))]",
+                "packageId": "[variables('_solutionId')]",
+                "contentSchemaVersion": "3.0.0",
+                "version": "[variables('_solutionVersion')]"
+            }
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces/providers/contentPackages",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/', variables('_solutionId'))]",
+            "apiVersion": "2023-04-01-preview",
+            "properties": {
+                "version": "[variables('_solutionVersion')]",
+                "kind": "Solution",
+                "contentSchemaVersion": "3.0.0",
+                "contentId": "[variables('_solutionId')]",
+                "source": {
+                    "kind": "Solution",
+                    "name": "[variables('_solutionName')]",
+                    "sourceId": "[variables('_solutionId')]"
+                },
+                "author": {
+                    "name": "[variables('_solutionAuthor')]"
+                },
+                "support": {
+                    "name": "[variables('_solutionAuthor')]",
+                    "tier": "[variables('_solutionTier')]"
+                },
+                "dependencies": {
+                    "operator": "AND",
+                    "criteria": [
+                        {
+                            "kind": "DataConnector",
+                            "contentId": "[variables('dataConnectorVersionConnectorDefinition')]",
+                            "version": "[variables('_dataConnectorContentIdConnectorDefinition')]"
+                        }
+                    ]
+                },
+                "firstPublishDate": "2022-06-24",
+                "providers": [
+                    "[variables('_solutionAuthor')]"
+                ],
+                "contentKind": "Solution",
+                "packageId": "[variables('_solutionId')]",
+                "contentProductId": "[concat(substring(variables('_solutionId'), 0, 50),'-','sl','-', uniqueString(concat(variables('_solutionId'),'-','Solution','-',variables('_solutionId'),'-', variables('_solutionVersion'))))]",
+                "displayName": "[variables('_solutionName')]",
+                "publisherDisplayName": "[variables('_solutionId')]",
+                "descriptionHtml": "test",
+                "icon": "[variables('_packageIcon')]",
+                "parentId": "[variables('_solutionId')]"
+            }
+        }
+    ]
+}

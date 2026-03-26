@@ -1,0 +1,141 @@
+{
+    "name": "ScutumConnectorDefinition",
+    "apiVersion": "2022-09-01-preview",
+    "type": "Microsoft.SecurityInsights/dataConnectorDefinitions",
+    "location": "{{location}}",
+    "kind": "Customizable",
+    "availability": {
+        "isPreview": true,
+        "status": 1
+    },
+    "properties": {
+        "connectorUiConfig": {
+            "id": "ScutumConnector",
+            "title": "Scutum",
+            "publisher": "Secure Sky Technology",
+            "descriptionMarkdown": "The Scutum connector ingests security alert data from Scutum WAF (Web Application Firewall) into Microsoft Sentinel, including alert details such as attack types, source IPs, and request information.\n\nSupports API Key authentication.\n\nFor more information, visit [Scutum API Docs](https://support.scutum.jp/manual/api/api-overview.html).",
+            "graphQueriesTableName": "ScutumAlert_CL",
+            "graphQueries": [
+                {
+                    "metricName": "Total events received",
+                    "legend": "Scutum Alert Events",
+                    "baseQuery": "ScutumAlert_CL"
+                }
+            ],
+            "sampleQueries": [
+                {
+                    "description": "All Scutum WAF alerts",
+                    "query": "ScutumAlert_CL\n| sort by TimeGenerated desc\n| take 100"
+                },
+                {
+                    "description": "Blocked attacks by category",
+                    "query": "ScutumAlert_CL\n| where Block == true\n| mv-expand Category\n| summarize Count = count() by tostring(Category)\n| sort by Count desc"
+                },
+                {
+                    "description": "Top source IPs",
+                    "query": "ScutumAlert_CL\n| summarize Count = count() by IpAddress\n| top 10 by Count"
+                }
+            ],
+            "dataTypes": [
+                {
+                    "name": "ScutumAlert_CL",
+                    "lastDataReceivedQuery": "ScutumAlert_CL\n| summarize Time = max(TimeGenerated)\n| where isnotempty(Time)"
+                }
+            ],
+            "connectivityCriteria": [
+                {
+                    "type": "HasDataConnectors"
+                }
+            ],
+            "availability": {
+                "isPreview": true,
+                "status": 1
+            },
+            "permissions": {
+                "resourceProvider": [
+                    {
+                        "provider": "Microsoft.OperationalInsights/workspaces",
+                        "permissionsDisplayText": "Read and Write permissions on the Log Analytics workspace are required.",
+                        "providerDisplayName": "Workspace",
+                        "scope": "Workspace",
+                        "requiredPermissions": {
+                            "read": true,
+                            "write": true,
+                            "delete": true,
+                            "action": false
+                        }
+                    }
+                ],
+                "customs": [
+                    {
+                        "name": "Scutum API Key",
+                        "description": "A Scutum API Key is required. Refer to the [Scutum API documentation](https://support.scutum.jp/manual/api/api-overview.html) for instructions on how to obtain one."
+                    }
+                ]
+            },
+            "instructionSteps": [
+                {
+                    "title": "Connect Scutum WAF to Microsoft Sentinel",
+                    "description": "Enter your Scutum API credentials below to start ingesting WAF alert logs into Microsoft Sentinel. You can add multiple connections for different hosts.",
+                    "instructions": [
+                        {
+                            "type": "Textbox",
+                            "parameters": {
+                                "label": "Scutum API Key",
+                                "placeholder": "Enter your Scutum API key",
+                                "type": "password",
+                                "name": "apiKey"
+                            }
+                        },
+                        {
+                            "type": "Textbox",
+                            "parameters": {
+                                "label": "Host (FQDN)",
+                                "placeholder": "e.g. www.example.com",
+                                "type": "text",
+                                "name": "scutumHost"
+                            }
+                        },
+                        {
+                            "type": "Textbox",
+                            "parameters": {
+                                "label": "Scutum Management Console ID",
+                                "placeholder": "Enter your management console ID",
+                                "type": "text",
+                                "name": "scutumId"
+                            }
+                        },
+                        {
+                            "type": "ConnectionToggleButton",
+                            "parameters": {
+                                "connectLabel": "Connect",
+                                "name": "connect"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Active Connections",
+                    "description": "The table below shows the status of each connected Scutum WAF host.",
+                    "instructions": [
+                        {
+                            "type": "DataConnectorsGrid",
+                            "parameters": {
+                                "mapping": [
+                                    {
+                                        "columnName": "Host (FQDN)",
+                                        "columnValue": "properties.request.queryParameters.host"
+                                    },
+                                    {
+                                        "columnName": "Management Console ID",
+                                        "columnValue": "properties.request.queryParameters.id"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

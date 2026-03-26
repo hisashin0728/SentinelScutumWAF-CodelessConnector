@@ -1,0 +1,66 @@
+{
+    "name": "ScutumDCR",
+    "apiVersion": "2024-03-11",
+    "type": "Microsoft.Insights/dataCollectionRules",
+    "kind": "Direct",
+    "location": "{{location}}",
+    "tags": {
+        "createdBy": "SentinelCodelessConnector"
+    },
+    "properties": {
+        "streamDeclarations": {
+            "Custom-ScutumAlert_CL": {
+                "columns": [
+                    {
+                        "name": "log_id",
+                        "type": "string"
+                    },
+                    {
+                        "name": "ip",
+                        "type": "string"
+                    },
+                    {
+                        "name": "block",
+                        "type": "boolean"
+                    },
+                    {
+                        "name": "category",
+                        "type": "dynamic"
+                    },
+                    {
+                        "name": "uri",
+                        "type": "string"
+                    },
+                    {
+                        "name": "ts",
+                        "type": "string"
+                    },
+                    {
+                        "name": "request",
+                        "type": "string"
+                    },
+                    {
+                        "name": "response",
+                        "type": "string"
+                    }
+                ]
+            }
+        },
+        "destinations": {
+            "logAnalytics": [
+                {
+                    "workspaceResourceId": "{{workspaceResourceId}}",
+                    "name": "clv2ws1"
+                }
+            ]
+        },
+        "dataFlows": [
+            {
+                "streams": ["Custom-ScutumAlert_CL"],
+                "destinations": ["clv2ws1"],
+                "outputStream": "Custom-ScutumAlert_CL",
+                "transformKql": "source | extend TimeGenerated = todatetime(ts) | project TimeGenerated, LogId = log_id, IpAddress = ip, Block = block, Category = category, Uri = uri, Request = request, Response = response"
+            }
+        ]
+    }
+}

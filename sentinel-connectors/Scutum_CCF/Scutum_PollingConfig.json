@@ -1,0 +1,78 @@
+[
+  {
+    "type": "Microsoft.SecurityInsights/dataConnectors",
+    "apiVersion": "2023-02-01-preview",
+    "name": "ScutumAlertConnector",
+    "location": "{{location}}",
+    "kind": "RestApiPoller",
+    "properties": {
+      "connectorDefinitionName": "ScutumConnectorDefinition",
+      "dataType": "ScutumAlert_CL",
+      "dcrConfig": {
+        "streamName": "Custom-ScutumAlert_CL",
+        "dataCollectionEndpoint": "{{dataCollectionEndpoint}}",
+        "dataCollectionRuleImmutableId": "{{dataCollectionRuleImmutableId}}"
+      },
+      "auth": {
+        "type": "APIKey",
+        "ApiKey": "{{apiKey}}",
+        "ApiKeyName": "X-Scutum-API-Key",
+        "ApiKeyIdentifier": ""
+      },
+      "request": {
+        "apiEndpoint": "https://api.scutum.jp/api/v1/alert",
+        "httpMethod": "GET",
+        "queryTimeFormat": "yyyy-MM-ddTHH:mm:sszzz",
+        "rateLimitQPS": 1,
+        "queryWindowInMin": 5,
+        "retryCount": 3,
+        "timeoutInSeconds": 60,
+        "StartTimeAttributeName": "from",
+        "EndTimeAttributeName": "to",
+        "queryParameters": {
+          "host": "{{scutumHost}}",
+          "id": "{{scutumId}}",
+          "time_order": "asc"
+        }
+      },
+      "paging": {
+        "pagingType": "NextPageToken",
+        "nextPageTokenJsonPath": "$.next_marker",
+        "NextPageParaName": "marker",
+        "hasNextFlagJsonPath": "$.truncated",
+        "pageSize": 1000
+      },
+      "response": {
+        "eventsJsonPaths": ["$.data"],
+        "format": "json"
+      },
+      "stepInfo": {
+        "stepType": "Nested",
+        "nextSteps": [
+          {
+            "stepId": "fetchAlertDetail",
+            "stepPlaceholdersParsingKql": "source | extend _LogId = tostring(log_id)"
+          }
+        ]
+      },
+      "stepCollectorConfigs": {
+        "fetchAlertDetail": {
+          "shouldJoinNestedData": true,
+          "request": {
+            "apiEndpoint": "https://api.scutum.jp/api/v1/alert_detail",
+            "httpMethod": "GET",
+            "queryParameters": {
+              "host": "{{scutumHost}}",
+              "id": "{{scutumId}}",
+              "log_id": "$_LogId$"
+            }
+          },
+          "response": {
+            "eventsJsonPaths": ["$"],
+            "format": "json"
+          }
+        }
+      }
+    }
+  }
+]
