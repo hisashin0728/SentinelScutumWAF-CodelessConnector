@@ -18,12 +18,12 @@
 ```
 Scutum API                    Microsoft Sentinel
 ┌──────────────────┐          ┌──────────────────────────┐
-│ /api/v1/alert    │──GET───▶│ CCF RestApiPoller        │
+│ /api/v1/alert    │──GET───▶ │ CCF RestApiPoller        │
 │ (ログ一覧)        │          │   ├─ 認証: API Key       │
-├──────────────────┤          │   ├─ ページング: marker    │
-│ /api/v1/         │◀─GET───│   └─ ネスト取得           │
+├──────────────────┤          │   ├─ ページング: marker   │
+│ /api/v1/         │◀─GET───  │   └─ ネスト取得           │
 │ alert_detail     │          │                          │
-│ (ログ詳細)        │──JSON──▶│ DCR (変換 KQL)           │
+│ (ログ詳細)        │──JSON──▶ │ DCR (変換 KQL)           │
 └──────────────────┘          │   └─▶ ScutumAlert_CL     │
                               └──────────────────────────┘
 ```
